@@ -1,21 +1,30 @@
 use std::str::FromStr;
 use crate::ast;
-use crate::ast::Expr;
-
+use crate::ast::Type;
 
 grammar;
 
-pub Term: String = {
-    r"[a-z]+" => String::from_str(<>).unwrap(),
+pub Type: Type = {
+Star, 
+Var,
+Arrow,
+ForAll,
+Lambda,
+App,
+Remote,
 };
-pub Int: i64 = {
-    r"\d+" => <>.parse::<i64>().unwrap(),
-};
-pub Expr: Expr = {Universe, Lam, Pi, Var, App};
+pub Star:Type = "star" ":" <num:Num> => ast::Type::Star(num);
+pub Var:Type = "var" "{" <name:Name> "," <num:Num> "}" => ast::Type::Var(name, num);
+pub Arrow:Type = "arrow" <type1:Type> "->" <type2:Type> => ast::Type::Arrow(Box::new(type1), Box::new(type2));
+pub ForAll:Type = "forall" "{" <name:Name> "}" "{" <type1:Type> "," <type2:Type> "}" => ast::Type::ForAll(name, Box::new(type1), Box::new(type2));
+pub Lambda:Type = "lambda" "{" <name:Name> "}" "{" <type1:Type> "," <type2:Type> "}" => ast::Type::Lambda(name, Box::new(type1), Box::new(type2));
+pub App:Type = "app" <type1:Type> "(" <type2:Type> ")" => ast::Type::App(Box::new(type1), Box::new(type2));
+pub Remote:Type = "remote" "{" <name:Name> "}" => ast::Type::Remote(name);
 
 
-pub Var: Expr = <t:Term>"_"<i:Int> => ast::Expr::Var(t.to_string(), i);  
-pub Universe: Expr = r"\*\d+"  => ast::Expr::Universe(ast::skip_first_char(<>).parse::<i64>().unwrap());  
-pub Lam: Expr = "λ" <var:Term> <i:Int> "." <expr:Expr> => ast::Expr::Lam(var.to_string(), i, Box::new(expr));  
-pub Pi: Expr = "Π" <var:Term> <i:Int> "." <expr:Expr> => ast::Expr::Pi(var.to_string(), i, Box::new(expr));  
-pub App: Expr =  r"\s+" <f:Expr> r"\s+" <s:Expr> r"\s+" => ast::Expr::App(Box::new(f), Box::new(s));
+pub Name: String = {
+    r"[a-zA-Z]+" => String::from_str(<>).unwrap(),
+};
+pub Num: usize = {
+    r"\d+" => <>.parse::<usize>().unwrap(),
+};
